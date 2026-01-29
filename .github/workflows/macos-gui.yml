@@ -4,7 +4,7 @@ on:
 
 jobs:
   gui:
-    runs-on: macos-latest
+    runs-on: macos-12
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -17,7 +17,7 @@ jobs:
 
       - name: Create Admin User & Enable Screen Sharing
         run: |
-          # 1. Tạo user mới
+          # 1. Tạo user mới tên là 'adminuser' với mật khẩu '123456'
           sudo dscl . -create /Users/adminuser
           sudo dscl . -create /Users/adminuser UserShell /bin/zsh
           sudo dscl . -create /Users/adminuser RealName "Admin User"
@@ -27,26 +27,11 @@ jobs:
           sudo dscl . -append /Groups/admin GroupMembership adminuser
           sudo createhomedir -c -u adminuser > /dev/null
 
-          # 2. Cấu hình Tự động đăng nhập (Auto Login) để tránh màn hình đen
-          # (Lưu ý: Đoạn này dùng script python để tạo file mã hóa mật khẩu)
-          sudo defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser adminuser
-          sudo python3 -c '
-          import os
-          # Mật khẩu 123456 được mã hóa XOR cho file kcpassword
-          kc_hex = "7D 89 78 80 7D 89 78 80 7D 89 78 80"
-          with open("/etc/kcpassword", "wb") as f:
-              f.write(bytes.fromhex(kc_hex))
-          os.chmod("/etc/kcpassword", 0o600)
-          '
-          
-          # 3. Kích hoạt Screen Sharing
+          # 2. Kích hoạt Screen Sharing cho user mới này
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -access -on \
           -users adminuser \
           -privs -all -restart -agent -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw 123456
-
-      - name: Setup tmate session (backup)
-        uses: mxschmitt/action-tmate@v2
 
       - name: Start Ngrok Tunnel
         run: |
