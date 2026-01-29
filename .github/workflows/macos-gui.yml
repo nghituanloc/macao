@@ -4,6 +4,7 @@ on:
 
 jobs:
   gui:
+    # QUAN TRỌNG: Đổi sang macos-12 để tránh lỗi màn hình đen bảo mật
     runs-on: macos-12
     steps:
       - name: Checkout code
@@ -17,7 +18,7 @@ jobs:
 
       - name: Create Admin User & Enable Screen Sharing
         run: |
-          # 1. Tạo user mới tên là 'adminuser' với mật khẩu '123456'
+          # 1. Tạo user mới tên 'adminuser' mật khẩu '123456'
           sudo dscl . -create /Users/adminuser
           sudo dscl . -create /Users/adminuser UserShell /bin/zsh
           sudo dscl . -create /Users/adminuser RealName "Admin User"
@@ -27,7 +28,7 @@ jobs:
           sudo dscl . -append /Groups/admin GroupMembership adminuser
           sudo createhomedir -c -u adminuser > /dev/null
 
-          # 2. Kích hoạt Screen Sharing cho user mới này
+          # 2. Kích hoạt Screen Sharing (Trên macOS 12 lệnh này chạy rất ổn)
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -access -on \
           -users adminuser \
