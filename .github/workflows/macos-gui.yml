@@ -15,15 +15,23 @@ jobs:
       - name: Authenticate Ngrok
         run: ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
-      - name: Enable Screen Sharing & Set Password
+      - name: Create Admin User & Enable Screen Sharing
         run: |
-          # 1. Đặt mật khẩu hệ thống cho user 'runner' là 123456 (Quan trọng nhất)
-          sudo dscl . -passwd /Users/runner 123456
-          
-          # 2. Kích hoạt Screen Sharing cho phép đăng nhập bằng user/pass
+          # 1. Tạo user mới tên là 'adminuser' với mật khẩu '123456'
+          sudo dscl . -create /Users/adminuser
+          sudo dscl . -create /Users/adminuser UserShell /bin/zsh
+          sudo dscl . -create /Users/adminuser RealName "Admin User"
+          sudo dscl . -create /Users/adminuser UniqueID 503
+          sudo dscl . -create /Users/adminuser PrimaryGroupID 20
+          sudo dscl . -passwd /Users/adminuser 123456
+          sudo dscl . -append /Groups/admin GroupMembership adminuser
+          sudo createhomedir -c -u adminuser > /dev/null
+
+          # 2. Kích hoạt Screen Sharing cho user mới này
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -access -on \
-          -restart -agent -privs -all
+          -users adminuser \
+          -privs -all -restart -agent -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw 123456
 
       - name: Start Ngrok Tunnel
         run: |
