@@ -4,7 +4,7 @@ on:
 
 jobs:
   gui:
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,6 +44,9 @@ jobs:
           -activate -configure -access -on \
           -users adminuser \
           -privs -all -restart -agent -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw 123456
+
+      - name: Setup tmate session (backup)
+        uses: mxschmitt/action-tmate@v2
 
       - name: Start Ngrok Tunnel
         run: |
