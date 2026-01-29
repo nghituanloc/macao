@@ -5,7 +5,7 @@ on:
 jobs:
   gui:
     # QUAN TRỌNG: Đổi sang macos-12 để tránh lỗi màn hình đen bảo mật
-    runs-on: macos-12
+    runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
