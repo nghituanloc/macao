@@ -1,0 +1,30 @@
+name: macOS GUI via Ngrok
+on:
+  workflow_dispatch:
+
+jobs:
+  gui:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Ngrok
+        run: brew install --cask ngrok
+
+      - name: Authenticate Ngrok
+        run: ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+
+      - name: Enable Screen Sharing
+        run: |
+          sudo /usr/libexec/PlistBuddy -c "Set :allowGuest (true)" /Library/Preferences/com.apple.RemoteManagement.plist
+          sudo /usr/sbin/kickstart -activate -configure -access -on -restart -agent -privs -all
+
+      - name: Start Ngrok Tunnel
+        run: |
+          ngrok tcp 5900 &
+          sleep 10
+          curl --silent http://127.0.0.1:4040/api/tunnels | python3 -c "import json,sys; data=json.load(sys.stdin); print(data['tunnels'][0]['public_url'])"
+
+      - name: Keep Alive
+        run: sleep 21600
