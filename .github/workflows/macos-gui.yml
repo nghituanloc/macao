@@ -17,13 +17,18 @@ jobs:
 
       - name: Enable Screen Sharing
         run: |
-          sudo /usr/libexec/PlistBuddy -c "Set :allowGuest (true)" /Library/Preferences/com.apple.RemoteManagement.plist
-          sudo /usr/sbin/kickstart -activate -configure -access -on -restart -agent -privs -all
+          # Kích hoạt Remote Management và đặt mật khẩu VNC là 123456
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+          -activate -configure -access -on \
+          -clientopts -setvnclegacy -vnclegacy yes \
+          -clientopts -setvncpw -vncpw 123456 \
+          -restart -agent -privs -all
 
       - name: Start Ngrok Tunnel
         run: |
           ngrok tcp 5900 &
           sleep 10
+          echo "Dia chi truy cap VNC:"
           curl --silent http://127.0.0.1:4040/api/tunnels | python3 -c "import json,sys; data=json.load(sys.stdin); print(data['tunnels'][0]['public_url'])"
 
       - name: Keep Alive
