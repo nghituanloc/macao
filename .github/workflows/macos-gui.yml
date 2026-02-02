@@ -1,58 +1,19 @@
-name: macOS GUI via Ngrok
+name: macOS SSH via tmate
 on:
   workflow_dispatch:
-    inputs:
-      debug_enabled:
-        type: boolean
-        description: "Bat SSH tmate cho phien workflow"
-        required: false
-        default: false
 
 jobs:
-  gui:
-    # QUAN TRỌNG: Đổi sang macos-12 để tránh lỗi màn hình đen bảo mật
+  ssh:
     runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Ngrok
-        run: brew install --cask ngrok
-
-      - name: Authenticate Ngrok
-        run: ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-
       - name: Setup SSH Session
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
         uses: mxschmitt/action-tmate@v3
         with:
           limit-access-to-actor: true
           detached: true
-
-      - name: Create Admin User & Enable Screen Sharing
-        run: |
-          # 1. Tạo user mới tên 'adminuser' mật khẩu '123456'
-          sudo dscl . -create /Users/adminuser
-          sudo dscl . -create /Users/adminuser UserShell /bin/zsh
-          sudo dscl . -create /Users/adminuser RealName "Admin User"
-          sudo dscl . -create /Users/adminuser UniqueID 503
-          sudo dscl . -create /Users/adminuser PrimaryGroupID 20
-          sudo dscl . -passwd /Users/adminuser 123456
-          sudo dscl . -append /Groups/admin GroupMembership adminuser
-          sudo createhomedir -c -u adminuser > /dev/null
-
-          # 2. Kích hoạt Screen Sharing (Trên macOS 12 lệnh này chạy rất ổn)
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -activate -configure -access -on \
-          -users adminuser \
-          -privs -all -restart -agent -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw 123456
-
-      - name: Start Ngrok Tunnel
-        run: |
-          ngrok tcp 5900 &
-          sleep 10
-          echo "Dia chi truy cap VNC:"
-          curl --silent http://127.0.0.1:4040/api/tunnels | python3 -c "import json,sys; data=json.load(sys.stdin); print(data['tunnels'][0]['public_url'])"
 
       - name: Keep Alive
         run: sleep 21600

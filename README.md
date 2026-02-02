@@ -1,13 +1,13 @@
 # macao
 
-Tài liệu này hướng dẫn triển khai giao diện macOS để code qua GitHub Actions và Ngrok, từ khâu chuẩn bị đến kết nối VNC.
+Tài liệu này hướng dẫn truy cập macOS runner qua SSH (tmate) bằng GitHub Actions.
 
 ## Yêu cầu
 
 - Tài khoản GitHub
-- Tài khoản ngrok và authtoken
+- SSH key đã thêm vào GitHub account
 - Git cài trên máy
-- VNC Viewer trên Windows hoặc Screen Sharing trên macOS
+- Terminal có lệnh ssh
 
 ## Bước 1: Chuẩn bị repository
 
@@ -28,41 +28,37 @@ Lưu ý:
 - Không commit authtoken ngrok vào repo.
 - File `.gitignore` đã có dòng `may ao mac.txt` để tránh lộ dữ liệu nhạy cảm nếu bạn có ghi chú cục bộ.
 
-## Bước 2: Tạo secret NGROK_AUTH_TOKEN
+## Bước 2: Thêm SSH key vào GitHub
 
 Trên GitHub:
-- Vào repo -> Settings -> Secrets and variables -> Actions -> New repository secret
-- Name: `NGROK_AUTH_TOKEN`
-- Value: dán authtoken lấy từ trang ngrok
+- Vào Settings -> SSH and GPG keys -> New SSH key
+- Dán public key của bạn
+
+Lưu ý:
+- Workflow dùng `limit-access-to-actor`, chỉ tài khoản có SSH key mới kết nối được.
 
 ## Bước 3: Chạy workflow
 
 Trên GitHub:
 - Vào tab Actions
-- Chọn workflow `macOS GUI via Ngrok`
+- Chọn workflow `macOS SSH via tmate`
 - Bấm Run workflow
 
 Không cần cấu hình self-hosted runner. Workflow dùng runner do GitHub cung cấp (`macos-latest`).
 
-## Bước 4: Lấy địa chỉ VNC
+## Bước 4: Lấy lệnh SSH
 
-Mở log của bước `Start Ngrok Tunnel`. Ở cuối log sẽ in ra địa chỉ dạng:
+Mở log của bước `Setup SSH Session`. Ở cuối log sẽ in ra lệnh dạng:
 
 ```
-tcp://0.tcp.ngrok.io:12345
+ssh <user>@ssh.tmate.io
 ```
 
-## Bước 5: Kết nối VNC
+## Bước 5: Kết nối SSH
 
-Trên Windows:
-- Mở VNC Viewer
-- Nhập địa chỉ ở log, bỏ phần `tcp://`
-
-Trên macOS:
-- Mở ứng dụng Screen Sharing
-- Nhập địa chỉ ở log, bỏ phần `tcp://`
-
-Nếu không kết nối được, chạy lại workflow và lấy địa chỉ mới.
+Trên máy bạn:
+- Chạy lệnh SSH ở log
+- Nếu SSH key không phải mặc định, dùng `ssh -i path <user>@ssh.tmate.io`
 
 ## Thư mục mã nguồn trên macOS runner
 
@@ -76,14 +72,15 @@ Sau khi kết nối, mã nguồn nằm tại:
 
 - Hủy workflow trong tab Actions khi xong việc để giải phóng tài nguyên.
 - Phiên sẽ tự dừng sau 6 giờ do lệnh `sleep 21600`.
+- Thoát SSH để kết thúc sớm.
 
 ## Lưu ý bảo mật
 
-- Nếu authtoken bị lộ, hãy thu hồi token cũ và tạo token mới.
-- Không lưu token vào file trong repo.
+- Không chia sẻ lệnh SSH từ log cho người khác.
+- Không lưu thông tin nhạy cảm vào repo.
 
 ## Xử lý sự cố thường gặp
 
-- Không có địa chỉ ngrok: kiểm tra secret `NGROK_AUTH_TOKEN` và chạy lại workflow.
-- Không kết nối VNC: thử lại sau 1 đến 2 phút, lấy địa chỉ ngrok mới.
+- Không thấy lệnh SSH: đợi log cập nhật, kiểm tra đã thêm SSH key vào GitHub.
+- Không kết nối SSH: kiểm tra mạng, thử chạy lại workflow để tạo phiên mới.
 - Workflow bị tắt sớm: GitHub giới hạn thời gian chạy tối đa.
