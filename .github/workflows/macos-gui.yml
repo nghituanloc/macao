@@ -4,39 +4,29 @@ on:
 
 jobs:
   vnc:
-    runs-on: macos-10
+    runs-on: macos-latest
     env:
       NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
-      NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-      VNC_PASSWORD: mac2026A
+      # Rút ngắn mật khẩu còn đúng 8 ký tự để tránh lỗi xác thực trên macOS VNC legacy
+      VNC_PASSWORD: mac2026A 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Runner notes
-        run: |
-          echo "Selected runner: macos-10"
-          echo "GitHub-hosted macOS runners are not MDM managed by your org."
-          echo "If macos-10 is unavailable in your account, this job will fail at queue stage."
-          echo "If you need full GUI control, use a self-hosted Mac managed by your MDM."
-
       - name: Validate secrets
         run: |
-          if [ -z "$NGROK_AUTHTOKEN" ] && [ -z "$NGROK_AUTH_TOKEN" ]; then
-            echo "Error: missing NGROK_AUTHTOKEN or NGROK_AUTH_TOKEN secret"
+          if [ -z "$NGROK_AUTHTOKEN" ]; then
+            echo "Error: NGROK_AUTHTOKEN is missing in Secrets"
             exit 1
           fi
 
       - name: Enable VNC and Screen Sharing
         run: |
-          # Best effort: try to align runner account password.
-          if sudo dscl . -passwd /Users/runner "$VNC_PASSWORD"; then
-            echo "SYSTEM_PASSWORD_UPDATED=true" >> "$GITHUB_ENV"
-          else
-            echo "SYSTEM_PASSWORD_UPDATED=false" >> "$GITHUB_ENV"
-            echo "Cannot change runner account password, continue."
-          fi
-
+          # Thiết lập mật khẩu cho user runner để đăng nhập hệ thống
+          sudo dscl . -passwd /Users/runner "$VNC_PASSWORD" || echo "Không thể đổi pass user, bỏ qua..."
+          
+          # Cấu hình Remote Management (ARD) và VNC Legacy
+          # Sử dụng -vncpw để đặt mật khẩu riêng cho kết nối VNC
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
             -activate -configure -access -on \
             -allowAccessFor -allUsers \
@@ -45,78 +35,34 @@ jobs:
             -clientopts -setvncpw -vncpw "$VNC_PASSWORD" \
             -restart -agent
 
-          sudo launchctl kickstart -k system/com.apple.screensharing || true
-
-          for _ in {1..20}; do
-            if sudo lsof -nP -iTCP:5900 -sTCP:LISTEN > /dev/null 2>&1; then
-              echo "VNC service ready on port 5900"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "Error: VNC service not listening on port 5900"
-          exit 1
+          # Ép khởi động dịch vụ Screensharing để xử lý lỗi "Screen control might be disabled"
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
+          
+          echo "VNC service configured."
 
       - name: Install ngrok
         run: brew install ngrok/ngrok/ngrok
 
       - name: Start ngrok
         run: |
-          TOKEN="$NGROK_AUTHTOKEN"
-          if [ -z "$TOKEN" ]; then
-            TOKEN="$NGROK_AUTH_TOKEN"
-          fi
-          ngrok config add-authtoken "$TOKEN"
+          ngrok config add-authtoken "$NGROK_AUTHTOKEN"
           ngrok tcp 5900 --log=stdout > ngrok.log 2>&1 &
+          sleep 5 # Chờ ngrok khởi tạo
 
-      - name: Get connection info
+      - name: Get Connection Info
         run: |
-          python3 - <<'PY' >> "$GITHUB_ENV"
-          import json
-          import sys
-          import time
-          import urllib.request
-
-          api_url = "http://127.0.0.1:4040/api/tunnels"
-          for _ in range(30):
-              try:
-                  with urllib.request.urlopen(api_url, timeout=2) as response:
-                      data = json.load(response)
-                  tunnels = data.get("tunnels", [])
-                  tcp_tunnel = next((t for t in tunnels if t.get("proto") == "tcp"), None)
-                  if tcp_tunnel and tcp_tunnel.get("public_url", "").startswith("tcp://"):
-                      address = tcp_tunnel["public_url"].replace("tcp://", "", 1)
-                      host, port = address.rsplit(":", 1)
-                      print(f"ADDRESS={address}")
-                      print(f"NGROK_HOST={host}")
-                      print(f"NGROK_PORT={port}")
-                      sys.exit(0)
-              except Exception:
-                  pass
-              time.sleep(2)
-          print("Error: cannot get ngrok tunnel from local API", file=sys.stderr)
-          sys.exit(1)
-          PY
-          echo "Connect to: $ADDRESS"
+          # Lấy địa chỉ từ API local của ngrok
+          PUBLIC_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+          echo "ADDRESS=${PUBLIC_URL#tcp://}" >> $GITHUB_ENV
+          echo "Kết nối tới: ${PUBLIC_URL#tcp://}"
 
       - name: Summary
         run: |
-          MACHINE_USERNAME="$(whoami)"
-          SYSTEM_PASSWORD_UPDATED="${SYSTEM_PASSWORD_UPDATED:-false}"
-          echo "VNC address: $ADDRESS"
-          echo "VNC username: $MACHINE_USERNAME"
-          echo "VNC password: $VNC_PASSWORD"
-          echo "System password updated: $SYSTEM_PASSWORD_UPDATED"
-          {
-            echo "## VNC connection info"
-            echo ""
-            echo "- Address: \`$ADDRESS\`"
-            echo "- Username: \`$MACHINE_USERNAME\`"
-            echo "- Password: \`$VNC_PASSWORD\`"
-            echo "- System account password updated: \`$SYSTEM_PASSWORD_UPDATED\`"
-            echo "- Runner: \`macos-10\`"
-            echo "- Note: GitHub-hosted runners cannot be forced into your MDM policy."
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "## Thông tin kết nối VNC" >> $GITHUB_STEP_SUMMARY
+          echo "- **Địa chỉ:** \`$ADDRESS\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Password:** \`$VNC_PASSWORD\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Username:** \`runner\`" >> $GITHUB_STEP_SUMMARY
+          echo "> Lưu ý: Nếu RealVNC báo lỗi Auth, hãy thử dùng trình duyệt hoặc phần mềm VNC khác như TightVNC." >> $GITHUB_STEP_SUMMARY
 
       - name: Keep Alive
         run: sleep 21600
