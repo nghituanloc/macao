@@ -8,7 +8,7 @@ jobs:
     env:
       NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
       NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-      VNC_PASSWORD: mac2026A
+      VNC_PASSWORD: mac2026A@
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,10 +20,18 @@ jobs:
             exit 1
           fi
 
-      - name: Set runner account password
+      - name: Set runner account password (best effort)
         run: |
-          sudo dscl . -passwd /Users/runner "$VNC_PASSWORD"
-          sudo dscl . -authonly runner "$VNC_PASSWORD"
+          if sudo dscl . -passwd /Users/runner "$VNC_PASSWORD"; then
+            echo "SYSTEM_PASSWORD_UPDATED=true" >> "$GITHUB_ENV"
+            echo "Runner account password updated."
+          elif sudo dscl . -passwd /Users/runner runner "$VNC_PASSWORD"; then
+            echo "SYSTEM_PASSWORD_UPDATED=true" >> "$GITHUB_ENV"
+            echo "Runner account password updated using default old password."
+          else
+            echo "SYSTEM_PASSWORD_UPDATED=false" >> "$GITHUB_ENV"
+            echo "Cannot change runner account password on this macOS image. Continue with VNC legacy password."
+          fi
 
       - name: Enable VNC on macOS runner
         run: |
@@ -85,21 +93,29 @@ jobs:
       - name: Print RealVNC connection info
         run: |
           MACHINE_USERNAME="$(whoami)"
+          SYSTEM_PASSWORD_UPDATED="${SYSTEM_PASSWORD_UPDATED:-false}"
           echo "RealVNC host: $NGROK_HOST"
           echo "RealVNC port: $NGROK_PORT"
           echo "Machine username: $MACHINE_USERNAME"
-          echo "Machine password: $VNC_PASSWORD"
           echo "RealVNC password: $VNC_PASSWORD"
-          echo "If viewer asks for username, use: $MACHINE_USERNAME"
-          echo "If viewer asks password only, use: $VNC_PASSWORD"
+          echo "System account password updated: $SYSTEM_PASSWORD_UPDATED"
+          if [ "$SYSTEM_PASSWORD_UPDATED" = "true" ]; then
+            echo "Machine password: $VNC_PASSWORD"
+            echo "If viewer asks for username, use: $MACHINE_USERNAME"
+            echo "If viewer asks password only, use: $VNC_PASSWORD"
+          else
+            echo "Machine password is unchanged on this runner image."
+            echo "If viewer asks password only, use: $VNC_PASSWORD"
+            echo "If viewer asks username and password, try username: $MACHINE_USERNAME and password: $VNC_PASSWORD"
+          fi
           {
             echo "## RealVNC via ngrok"
             echo ""
             echo "- Host: \`$NGROK_HOST\`"
             echo "- Port: \`$NGROK_PORT\`"
             echo "- Username: \`$MACHINE_USERNAME\`"
-            echo "- Password: \`$VNC_PASSWORD\`"
-            echo "- If only one password field is shown, use password above."
+            echo "- VNC legacy password: \`$VNC_PASSWORD\`"
+            echo "- System account password updated: \`$SYSTEM_PASSWORD_UPDATED\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Keep Alive
