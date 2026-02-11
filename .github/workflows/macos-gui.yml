@@ -4,7 +4,7 @@ on:
 
 jobs:
   vnc:
-    runs-on: macos-latest
+    runs-on: macos-10
     env:
       NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
       # Rút ngắn mật khẩu còn đúng 8 ký tự để tránh lỗi xác thực trên macOS VNC legacy
@@ -61,7 +61,7 @@ jobs:
           echo "- **Địa chỉ:** \`$ADDRESS\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Password:** \`$VNC_PASSWORD\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Username:** \`runner\`" >> $GITHUB_STEP_SUMMARY
-          echo "> Lưu ý: Nếu RealVNC báo lỗi Auth, hãy dùng TightVNC, TigerVNC hoặc Remmina." >> $GITHUB_STEP_SUMMARY
+          echo "> Khuyến nghị dùng TightVNC, TigerVNC hoặc Remmina để kết nối ổn định hơn." >> $GITHUB_STEP_SUMMARY
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Hướng dẫn dùng TightVNC / TigerVNC / Remmina" >> $GITHUB_STEP_SUMMARY
