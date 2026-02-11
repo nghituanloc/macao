@@ -1,4 +1,4 @@
-name: macOS VNC via ngrok (Optimized)
+name: macOS VNC (Optimized)
 on:
   workflow_dispatch:
 
@@ -22,9 +22,8 @@ jobs:
 
       - name: Enable VNC and Screen Sharing
         run: |
-          # Thiết lập mật khẩu cho user runner để đăng nhập hệ thống
-          sudo dscl . -passwd /Users/runner "$VNC_PASSWORD" || echo "Không thể đổi pass user, bỏ qua..."
-          
+          # Bỏ qua việc đổi mật khẩu user runner trên macos-latest (không cần cho VNC legacy)
+
           # Cấu hình Remote Management (ARD) và VNC Legacy
           # Sử dụng -vncpw để đặt mật khẩu riêng cho kết nối VNC
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
@@ -63,6 +62,16 @@ jobs:
           echo "- **Password:** \`$VNC_PASSWORD\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Username:** \`runner\`" >> $GITHUB_STEP_SUMMARY
           echo "> Lưu ý: Nếu RealVNC báo lỗi Auth, hãy thử dùng trình duyệt hoặc phần mềm VNC khác như TightVNC." >> $GITHUB_STEP_SUMMARY
+
+          # In ra thông tin đăng nhập RealVNC vào log nếu có địa chỉ
+          if [ -n "$ADDRESS" ]; then
+            echo "===== Thông tin đăng nhập RealVNC ====="
+            echo "Địa chỉ: $ADDRESS"
+            echo "Username: runner"
+            echo "Password: $VNC_PASSWORD"
+          else
+            echo "Không có thông tin địa chỉ VNC (ngrok có thể chưa khởi tạo thành công)."
+          fi
 
       - name: Keep Alive
         run: sleep 21600
