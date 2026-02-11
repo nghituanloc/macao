@@ -6,11 +6,11 @@ on:
         description: GitHub macOS runner label
         required: true
         type: choice
-        default: macos-13
+        default: macos-100
         options:
+          - macos-10
           - macos-13
           - macos-14
-          - macos-15
 
 jobs:
   vnc:
