@@ -4,7 +4,7 @@ on:
 
 jobs:
   vnc:
-    runs-on: macos-10
+    runs-on: windows-latest
     env:
       NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
       # Rút ngắn mật khẩu còn đúng 8 ký tự để tránh lỗi xác thực trên macOS VNC legacy
