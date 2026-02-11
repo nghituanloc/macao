@@ -61,11 +61,18 @@ jobs:
           echo "- **Địa chỉ:** \`$ADDRESS\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Password:** \`$VNC_PASSWORD\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Username:** \`runner\`" >> $GITHUB_STEP_SUMMARY
-          echo "> Lưu ý: Nếu RealVNC báo lỗi Auth, hãy thử dùng trình duyệt hoặc phần mềm VNC khác như TightVNC." >> $GITHUB_STEP_SUMMARY
+          echo "> Lưu ý: Nếu RealVNC báo lỗi Auth, hãy dùng TightVNC, TigerVNC hoặc Remmina." >> $GITHUB_STEP_SUMMARY
 
-          # In ra thông tin đăng nhập RealVNC vào log nếu có địa chỉ
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Hướng dẫn dùng TightVNC / TigerVNC / Remmina" >> $GITHUB_STEP_SUMMARY
+          echo "- Mở client VNC (TightVNC, TigerVNC hoặc Remmina)." >> $GITHUB_STEP_SUMMARY
+          echo "- Trường *Server/Host*: \`$ADDRESS\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Khi hỏi *Password*: nhập \`$VNC_PASSWORD\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Không nhập username nếu client chỉ hỏi một ô password." >> $GITHUB_STEP_SUMMARY
+
+          # In ra thông tin đăng nhập vào log nếu có địa chỉ
           if [ -n "$ADDRESS" ]; then
-            echo "===== Thông tin đăng nhập RealVNC ====="
+            echo "===== Thông tin đăng nhập VNC ====="
             echo "Địa chỉ: $ADDRESS"
             echo "Username: runner"
             echo "Password: $VNC_PASSWORD"
